@@ -30,6 +30,7 @@ class MSTParserLSTM:
         self.rels = {word: ind for ind, word in enumerate(rels)}
         self.irels = rels
 
+        self.cposFlag = options.cposFlag
 
         self.external_embedding, self.edim = None, 0
         if options.external_embedding is not None:
@@ -146,7 +147,10 @@ class MSTParserLSTM:
 
                 for entry in conll_sentence:
                     wordvec = self.wlookup[int(self.vocab.get(entry.norm, 0))] if self.wdims > 0 else None
-                    posvec = self.plookup[int(self.pos[entry.pos])] if self.pdims > 0 else None
+                    if self.cposFlag:
+                        posvec = self.plookup[int(self.pos[entry.cpos])] if self.pdims > 0 else None
+                    else:
+                        posvec = self.plookup[int(self.pos[entry.pos])] if self.pdims > 0 else None
                     evec = self.elookup[int(self.extrnd.get(entry.form, self.extrnd.get(entry.norm, 0)))] if self.external_embedding is not None else None
                     entry.vec = concatenate(filter(None, [wordvec, posvec, evec]))
 
@@ -234,7 +238,10 @@ class MSTParserLSTM:
                     c = float(self.wordsCount.get(entry.norm, 0))
                     dropFlag = (random.random() < (c/(0.25+c)))
                     wordvec = self.wlookup[int(self.vocab.get(entry.norm, 0)) if dropFlag else 0] if self.wdims > 0 else None
-                    posvec = self.plookup[int(self.pos[entry.pos])] if self.pdims > 0 else None
+                    if self.cposFlag:
+                        posvec = self.plookup[int(self.pos[entry.cpos])] if self.pdims > 0 else None
+                    else:
+                        posvec = self.plookup[int(self.pos[entry.pos])] if self.pdims > 0 else None
                     evec = None
 
                     if self.external_embedding is not None:

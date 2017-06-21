@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser.add_option("--userl", action="store_true", dest="rlMostFlag", default=False)
     parser.add_option("--predict", action="store_true", dest="predictFlag", default=False)
     parser.add_option("--dynet-mem", type="int", dest="cnn_mem", default=512)
+    parser.add_option("--cpos", action="store_true", help="To use CPOS/UPOS field instead of POS/XPOS", dest="cposFlag", default=False)
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding
@@ -41,7 +42,7 @@ if __name__ == '__main__':
             sys.exit()
 
         print 'Preparing vocab'
-        words, w2i, pos, rels = utils.vocab(options.conll_train)
+        words, w2i, pos, rels = utils.vocab(options.conll_train, options.cposFlag)
 
         with open(os.path.join(options.output, options.params), 'w') as paramsfp:
             pickle.dump((words, w2i, pos, rels, options), paramsfp)

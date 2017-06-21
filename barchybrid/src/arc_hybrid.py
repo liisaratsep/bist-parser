@@ -32,6 +32,8 @@ class ArcHybridLSTM:
         self.rlFlag = options.rlFlag
         self.k = options.window
 
+        self.cposFlag = options.cposFlag
+
         self.nnvecs = (1 if self.headFlag else 0) + (2 if self.rlFlag or self.rlMostFlag else 0)
 
         self.external_embedding = None
@@ -171,7 +173,10 @@ class ArcHybridLSTM:
             c = float(self.wordsCount.get(root.norm, 0))
             dropFlag =  not train or (random.random() < (c/(0.25+c)))
             root.wordvec = self.wlookup[int(self.vocab.get(root.norm, 0)) if dropFlag else 0]
-            root.posvec = self.plookup[int(self.pos[root.pos])] if self.pdims > 0 else None
+            if self.cposFlag:
+                root.posvec = self.plookup[int(self.pos[root.cpos])] if self.pdims > 0 else None
+            else:
+                root.posvec = self.plookup[int(self.pos[root.pos])] if self.pdims > 0 else None
 
             if self.external_embedding is not None:
                 #if not dropFlag and random.random() < 0.5:

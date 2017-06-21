@@ -25,7 +25,7 @@ class ConllEntry:
         return '\t'.join(['_' if v is None else v for v in values])
 
 
-def vocab(conll_path):
+def vocab(conll_path, cposFlag):
     wordsCount = Counter()
     posCount = Counter()
     relCount = Counter()
@@ -33,7 +33,10 @@ def vocab(conll_path):
     with open(conll_path, 'r') as conllFP:
         for sentence in read_conll(conllFP):
             wordsCount.update([node.norm for node in sentence if isinstance(node, ConllEntry)])
-            posCount.update([node.pos for node in sentence if isinstance(node, ConllEntry)])
+            if cposFlag:
+                posCount.update([node.cpos for node in sentence if isinstance(node, ConllEntry)])
+            else:
+                posCount.update([node.pos for node in sentence if isinstance(node, ConllEntry)])
             relCount.update([node.relation for node in sentence if isinstance(node, ConllEntry)])
 
     return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())}, posCount.keys(), relCount.keys())

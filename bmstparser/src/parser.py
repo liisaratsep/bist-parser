@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_option("--disablecostaug", action="store_false", dest="costaugFlag", default=True)
     parser.add_option("--dynet-seed", type="int", dest="seed", default=0)
     parser.add_option("--dynet-mem", type="int", dest="mem", default=0)
+    parser.add_option("--cpos", action="store_true", help="To use CPOS/UPOS field instead of POS/XPOS", dest="cposFlag", default=False)
 
     (options, args) = parser.parse_args()
 
@@ -58,7 +59,7 @@ if __name__ == '__main__':
             os.system('python src/utils/evaluation_script/conll17_ud_eval.py -v -w src/utils/evaluation_script/weights.clas ' + options.conll_test + ' ' + testpath + ' > ' + testpath + '.txt')
     else:
         print 'Preparing vocab'
-        words, w2i, pos, rels = utils.vocab(options.conll_train)
+        words, w2i, pos, rels = utils.vocab(options.conll_train, options.cposFlag)
 
         with open(os.path.join(options.output, options.params), 'w') as paramsfp:
             pickle.dump((words, w2i, pos, rels, options), paramsfp)
