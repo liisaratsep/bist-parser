@@ -2,10 +2,9 @@ from collections import Counter
 import re
 
 
-
 class ConllEntry:
-    def __init__(self, id, form, lemma, pos, cpos, feats=None, parent_id=None, relation=None, deps=None, misc=None):
-        self.id = id
+    def __init__(self, index, form, lemma, pos, cpos, feats=None, parent_id=None, relation=None, deps=None, misc=None):
+        self.id = index
         self.form = form
         self.norm = normalize(form)
         self.cpos = cpos.upper()
@@ -22,7 +21,9 @@ class ConllEntry:
         self.pred_relation = None
 
     def __str__(self):
-        values = [str(self.id), self.form, self.lemma, self.cpos, self.pos, self.feats, str(self.pred_parent_id) if self.pred_parent_id is not None else None, self.pred_relation, self.deps, self.misc]
+        values = [str(self.id), self.form, self.lemma, self.cpos, self.pos, self.feats,
+                  str(self.pred_parent_id) if self.pred_parent_id is not None else None, self.pred_relation, self.deps,
+                  self.misc]
         return '\t'.join(['_' if v is None else v for v in values])
 
 
@@ -34,16 +35,15 @@ class ParseForest:
             root.children = []
             root.scores = None
             root.parent = None
-            root.pred_parent_id = 0 # None
-            root.pred_relation = 'rroot' # None
+            root.pred_parent_id = 0  # None
+            root.pred_relation = 'rroot'  # None
             root.vecs = None
             root.lstms = None
 
     def __len__(self):
         return len(self.roots)
 
-
-    def Attach(self, parent_index, child_index):
+    def attach(self, parent_index, child_index):
         parent = self.roots[parent_index]
         child = self.roots[child_index]
 
@@ -51,39 +51,39 @@ class ParseForest:
         del self.roots[child_index]
 
 
-def isProj(sentence):
+def is_proj(sentence):
     forest = ParseForest(sentence)
     unassigned = {entry.id: sum([1 for pentry in sentence if pentry.parent_id == entry.id]) for entry in sentence}
 
     for _ in xrange(len(sentence)):
         for i in xrange(len(forest.roots) - 1):
-            if forest.roots[i].parent_id == forest.roots[i+1].id and unassigned[forest.roots[i].id] == 0:
-                unassigned[forest.roots[i+1].id]-=1
-                forest.Attach(i+1, i)
+            if forest.roots[i].parent_id == forest.roots[i + 1].id and unassigned[forest.roots[i].id] == 0:
+                unassigned[forest.roots[i + 1].id] -= 1
+                forest.attach(i + 1, i)
                 break
-            if forest.roots[i+1].parent_id == forest.roots[i].id and unassigned[forest.roots[i+1].id] == 0:
-                unassigned[forest.roots[i].id]-=1
-                forest.Attach(i, i+1)
+            if forest.roots[i + 1].parent_id == forest.roots[i].id and unassigned[forest.roots[i + 1].id] == 0:
+                unassigned[forest.roots[i].id] -= 1
+                forest.attach(i, i + 1)
                 break
 
     return len(forest.roots) == 1
 
 
-def vocab(conll_path, cposFlag):
-    wordsCount = Counter()
-    posCount = Counter()
-    relCount = Counter()
+def vocab(conll_path, cpos_flag):
+    words_count = Counter()
+    pos_count = Counter()
+    rel_count = Counter()
 
     with open(conll_path, 'r') as conllFP:
         for sentence in read_conll(conllFP, True):
-            wordsCount.update([node.norm for node in sentence if isinstance(node, ConllEntry)])
-            if cposFlag:
-                posCount.update([node.cpos for node in sentence if isinstance(node, ConllEntry)])
+            words_count.update([node.norm for node in sentence if isinstance(node, ConllEntry)])
+            if cpos_flag:
+                pos_count.update([node.cpos for node in sentence if isinstance(node, ConllEntry)])
             else:
-                posCount.update([node.pos for node in sentence if isinstance(node, ConllEntry)])
-            relCount.update([node.relation for node in sentence if isinstance(node, ConllEntry)])
+                pos_count.update([node.pos for node in sentence if isinstance(node, ConllEntry)])
+            rel_count.update([node.relation for node in sentence if isinstance(node, ConllEntry)])
 
-    return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())}, posCount.keys(), relCount.keys())
+    return words_count, {w: i for i, w in enumerate(words_count.keys())}, pos_count.keys(), rel_count.keys()
 
 
 def read_conll(fh, proj):
@@ -94,11 +94,11 @@ def read_conll(fh, proj):
     for line in fh:
         tok = line.strip().split('\t')
         if not tok or line.strip() == '':
-            if len(tokens)>1:
-                if not proj or isProj([t for t in tokens if isinstance(t, ConllEntry)]):
+            if len(tokens) > 1:
+                if not proj or is_proj([t for t in tokens if isinstance(t, ConllEntry)]):
                     yield tokens
                 else:
-                    #print 'Non-projective sentence dropped'
+                    # print 'Non-projective sentence dropped'
                     dropped += 1
                 read += 1
             tokens = [root]
@@ -106,7 +106,8 @@ def read_conll(fh, proj):
             if line[0] == '#' or '-' in tok[0] or '.' in tok[0]:
                 tokens.append(line.strip())
             else:
-                tokens.append(ConllEntry(int(tok[0]), tok[1], tok[2], tok[4], tok[3], tok[5], int(tok[6]) if tok[6] != '_' else -1, tok[7], tok[8], tok[9]))
+                tokens.append(ConllEntry(int(tok[0]), tok[1], tok[2], tok[4], tok[3], tok[5],
+                                         int(tok[6]) if tok[6] != '_' else -1, tok[7], tok[8], tok[9]))
     if len(tokens) > 1:
         yield tokens
 
@@ -122,12 +123,19 @@ def write_conll(fn, conll_gen):
             fh.write('\n')
 
 
-numberRegex = re.compile("[0-9]+|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+");
+numberRegex = re.compile("[0-9]+|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+")
+
+
 def normalize(word):
     return 'NUM' if numberRegex.match(word) else word.lower()
 
-cposTable = {"PRP$": "PRON", "VBG": "VERB", "VBD": "VERB", "VBN": "VERB", ",": ".", "''": ".", "VBP": "VERB", "WDT": "DET", "JJ": "ADJ", "WP": "PRON", "VBZ": "VERB", 
-             "DT": "DET", "#": ".", "RP": "PRT", "$": ".", "NN": "NOUN", ")": ".", "(": ".", "FW": "X", "POS": "PRT", ".": ".", "TO": "PRT", "PRP": "PRON", "RB": "ADV", 
-             ":": ".", "NNS": "NOUN", "NNP": "NOUN", "``": ".", "WRB": "ADV", "CC": "CONJ", "LS": "X", "PDT": "DET", "RBS": "ADV", "RBR": "ADV", "CD": "NUM", "EX": "DET", 
-             "IN": "ADP", "WP$": "PRON", "MD": "VERB", "NNPS": "NOUN", "JJS": "ADJ", "JJR": "ADJ", "SYM": "X", "VB": "VERB", "UH": "X", "ROOT-POS": "ROOT-CPOS", 
+
+cposTable = {"PRP$": "PRON", "VBG": "VERB", "VBD": "VERB", "VBN": "VERB", ",": ".", "''": ".", "VBP": "VERB",
+             "WDT": "DET", "JJ": "ADJ", "WP": "PRON", "VBZ": "VERB",
+             "DT": "DET", "#": ".", "RP": "PRT", "$": ".", "NN": "NOUN", ")": ".", "(": ".", "FW": "X", "POS": "PRT",
+             ".": ".", "TO": "PRT", "PRP": "PRON", "RB": "ADV",
+             ":": ".", "NNS": "NOUN", "NNP": "NOUN", "``": ".", "WRB": "ADV", "CC": "CONJ", "LS": "X", "PDT": "DET",
+             "RBS": "ADV", "RBR": "ADV", "CD": "NUM", "EX": "DET",
+             "IN": "ADP", "WP$": "PRON", "MD": "VERB", "NNPS": "NOUN", "JJS": "ADJ", "JJR": "ADJ", "SYM": "X",
+             "VB": "VERB", "UH": "X", "ROOT-POS": "ROOT-CPOS",
              "-LRB-": ".", "-RRB-": "."}
